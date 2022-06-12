@@ -47,7 +47,7 @@ var errFileExist = errors.New("the file is exist")
 
 func (d *subDirectory) writeFile(filename string, read io.Reader) error {
 	fn := filepath.Join(d.path, filepath.Base(filename))
-	if _, err := os.Stat(fn); os.IsExist(err) {
+	if _, err := os.Stat(fn); !os.IsNotExist(err) {
 		return errFileExist
 	}
 

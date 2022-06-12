@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 )
 
 const (
@@ -62,27 +63,29 @@ func (f *fileService) upload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := r.ParseMultipartForm(MAX_UPLOAD_SIZE); err != nil {
-		responseJSON(w, http.StatusBadRequest, H{"error": err.Error()})
-		return
-	}
-
 	readers, err := r.MultipartReader()
 	if err != nil {
 		responseJSON(w, http.StatusInternalServerError, H{"error": err.Error()})
 		return
 	}
 
-	deliver := make(map[string]interface{})
-
+	var deliver = make(map[string]interface{})
+	var index int
 loop:
 	for {
+		index++
+		indexStr := strconv.FormatInt(int64(index), 10)
+		if err != nil {
+			deliver["failed"] = "system internal error"
+			break loop
+		}
+
 		part, err := readers.NextPart()
 		if err != nil {
 			if errors.Is(err, io.EOF) {
 				break loop
 			}
-			deliver["error"] = err.Error()
+			deliver[indexStr+"_error"] = err.Error()
 			continue
 		}
 
@@ -93,10 +96,10 @@ loop:
 			if dir.matched(filename, contentType) {
 				if err := dir.writeFile(filename, part); err != nil {
 					if errors.Is(err, errFileExist) {
-						deliver["error"] = fmt.Sprintf("the file %s is exist", filename)
+						deliver[indexStr+"_error"] = fmt.Sprintf("the file<%s> is exist", filename)
 						continue loop
 					}
-					deliver["error"] = fmt.Sprintf("upload file %s failed: write file failed", filename)
+					deliver[indexStr+"_error"] = fmt.Sprintf("upload file<%s> failed: write file failed", filename)
 					continue loop
 				}
 				matched = true
@@ -105,12 +108,12 @@ loop:
 		if !matched {
 			err := f.otherDir.writeFile(filename, part)
 			if err != nil {
-				deliver["error"] = fmt.Sprintf("upload file %s failed: write file failed", filename)
+				deliver[indexStr+"_error"] = fmt.Sprintf("upload file<%s> failed: write file failed", filename)
 				continue loop
 			}
 		}
 
-		deliver["success"] = fmt.Sprintf("%s uploaded", filename)
+		deliver[indexStr+"_success"] = fmt.Sprintf("<%s> uploaded", filename)
 		part.Close()
 	}
 

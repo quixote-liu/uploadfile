@@ -16,5 +16,6 @@ func main() {
 
 	mux.HandleFunc("/upload", fileSvc.upload)
 
+	log.Println("listen on port: 7878")
 	log.Println(http.ListenAndServe(":7878", mux))
 }
