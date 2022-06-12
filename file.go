@@ -75,10 +75,6 @@ loop:
 	for {
 		index++
 		indexStr := strconv.FormatInt(int64(index), 10)
-		if err != nil {
-			deliver["failed"] = "system internal error"
-			break loop
-		}
 
 		part, err := readers.NextPart()
 		if err != nil {
