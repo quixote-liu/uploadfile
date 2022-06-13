@@ -25,13 +25,9 @@ func newSubDirectory(contentType, path string) *subDirectory {
 	}
 }
 
-func (d *subDirectory) matched(filename, contentType string) bool {
+func (d *subDirectory) matched(filename string) bool {
 	ext := mime.TypeByExtension(filepath.Ext(filename))
-	match, _ := regexp.MatchString(d.contentType, contentType)
-	if !match {
-		submatch, _ := regexp.MatchString(d.contentType, ext)
-		return submatch
-	}
+	match, _ := regexp.MatchString(d.contentType, ext)
 	return match
 }
 

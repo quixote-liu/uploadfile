@@ -18,3 +18,7 @@ func responseJSON(w http.ResponseWriter, status int, data interface{}) {
 	}
 	w.Write(v)
 }
+
+func responseStatus(w http.ResponseWriter, status int) {
+	w.WriteHeader(status)
+}
