@@ -116,6 +116,10 @@ loop:
 		part.Close()
 	}
 
+	if len(deliver) == 0 {
+		responseStatus(w, http.StatusCreated)
+		return
+	}
 	responseJSON(w, http.StatusCreated, deliver)
 }
 
@@ -148,8 +152,10 @@ func (f *fileService) show(w http.ResponseWriter, r *http.Request) {
 		responseStatus(w, http.StatusNotFound)
 		return
 	}
+	defer fs.Close()
 
 	buf := bytes.NewBuffer(nil)
+	defer buf.Reset()
 	if _, err := buf.ReadFrom(fs); err != nil {
 		log.Printf("read filename<%s> to buffer failed: %v", filename, err)
 		responseStatus(w, http.StatusNotFound)
