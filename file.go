@@ -95,11 +95,11 @@ loop:
 			if dir.matched(filename) {
 				if err := dir.writeFile(filename, part); err != nil {
 					if errors.Is(err, errFileExist) {
-						deliver[errorKey] = fmt.Sprintf("the file<%s> is exist", filename)
+						deliver[errorKey] = fmt.Sprintf("the file[%s] is exist", filename)
 						continue loop
 					}
 					log.Printf("write file content failed: [%s]:%v", filename, err)
-					deliver[errorKey] = fmt.Sprintf("upload file<%s> failed: write file failed", filename)
+					deliver[errorKey] = fmt.Sprintf("upload file[%s] failed: write file failed", filename)
 					continue loop
 				}
 				matched = true
@@ -108,12 +108,12 @@ loop:
 		if !matched {
 			err := f.otherDir.writeFile(filename, part)
 			if err != nil {
-				deliver[errorKey] = fmt.Sprintf("upload file<%s> failed: write file failed", filename)
+				deliver[errorKey] = fmt.Sprintf("upload file[%s] failed: write file failed", filename)
 				continue loop
 			}
 		}
 
-		deliver[successKey] = fmt.Sprintf("<%s> uploaded", filename)
+		deliver[successKey] = fmt.Sprintf("[%s] uploaded", filename)
 		part.Close()
 	}
 
