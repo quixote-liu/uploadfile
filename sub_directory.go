@@ -54,7 +54,7 @@ func (d *subDirectory) writeFile(filename string, read io.Reader) error {
 	defer f.Close()
 
 	if _, err = io.Copy(f, read); err != nil {
-		return fmt.Errorf("write file content failed")
+		return fmt.Errorf("write file content failed: %v", err)
 	}
 
 	return nil

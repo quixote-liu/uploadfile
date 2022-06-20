@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strconv"
 )
 
 const (
@@ -66,26 +65,22 @@ func (f *fileService) upload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	readers, err := r.MultipartReader()
+	reader, err := r.MultipartReader()
 	if err != nil {
 		responseJSON(w, http.StatusBadRequest, H{"error": err.Error()})
 		return
 	}
 
-	var deliver = make(map[string]interface{})
-	var index int
+	logs := newReadFileLogs()
+
 loop:
 	for {
-		index++
-		errorKey := strconv.FormatInt(int64(index), 10) + "_" + "error"
-		successKey := strconv.FormatInt(int64(index), 10) + "_" + "success"
-
-		part, err := readers.NextPart()
+		part, err := reader.NextPart()
 		if err != nil {
 			if errors.Is(err, io.EOF) {
 				break loop
 			}
-			deliver[errorKey] = err.Error()
+			logs.appendErr(err.Error())
 			continue
 		}
 
@@ -95,11 +90,11 @@ loop:
 			if dir.matched(filename) {
 				if err := dir.writeFile(filename, part); err != nil {
 					if errors.Is(err, errFileExist) {
-						deliver[errorKey] = fmt.Sprintf("the file[%s] is exist", filename)
+						logs.appendFailed(filename, "Exist!")
 						continue loop
 					}
 					log.Printf("write file content failed: [%s]:%v", filename, err)
-					deliver[errorKey] = fmt.Sprintf("upload file[%s] failed: write file failed", filename)
+					logs.appendFailed(filename, fmt.Sprintf("wirte file content failed: %v", err))
 					continue loop
 				}
 				matched = true
@@ -108,20 +103,23 @@ loop:
 		if !matched {
 			err := f.otherDir.writeFile(filename, part)
 			if err != nil {
-				deliver[errorKey] = fmt.Sprintf("upload file[%s] failed: write file failed", filename)
+				log.Printf("write file content failed: [%s]:%v", filename, err)
+				logs.appendFailed(filename, fmt.Sprintf("wirte file content failed: %v", err))
 				continue loop
 			}
 		}
 
-		deliver[successKey] = fmt.Sprintf("[%s] uploaded", filename)
+		logs.appendOK(filename)
 		part.Close()
 	}
 
-	if len(deliver) == 0 {
-		responseStatus(w, http.StatusCreated)
-		return
+	var status int
+	if logs.onlyHasErrors() {
+		status = http.StatusBadRequest
+	} else {
+		status = http.StatusCreated
 	}
-	responseJSON(w, http.StatusCreated, deliver)
+	responseJSON(w, status, logs.message())
 }
 
 func (f *fileService) show(w http.ResponseWriter, r *http.Request) {
