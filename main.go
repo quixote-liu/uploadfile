@@ -18,8 +18,8 @@ func main() {
 	mux.HandleFunc("/show", fileSvc.show)
 	mux.HandleFunc("/filenames", fileSvc.listFilenames)
 
-	log.Println("listen on port: 7878")
-	log.Println(http.ListenAndServe(":7878", mux))
+	log.Println("listen on port: 4545")
+	log.Println(http.ListenAndServe(":4545", mux))
 }
 
 type mux struct {
