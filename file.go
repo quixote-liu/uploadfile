@@ -193,3 +193,13 @@ func (f *fileService) listFilenames(w http.ResponseWriter, r *http.Request) {
 	}
 	responseJSON(w, http.StatusOK, d)
 }
+
+func (f *fileService) generatePDF(w http.ResponseWriter, r *http.Request) {
+	filename := r.URL.Query().Get("filename")
+	if filename == "" {
+		responseJSON(w, http.StatusBadRequest, H{"error": "missing filename in query message"})
+		return
+	}
+
+	
+}
