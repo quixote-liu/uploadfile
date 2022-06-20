@@ -98,6 +98,7 @@ loop:
 						deliver[errorKey] = fmt.Sprintf("the file<%s> is exist", filename)
 						continue loop
 					}
+					log.Printf("write file content failed: [%s]:%v", filename, err)
 					deliver[errorKey] = fmt.Sprintf("upload file<%s> failed: write file failed", filename)
 					continue loop
 				}

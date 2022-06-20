@@ -51,6 +51,7 @@ func (d *subDirectory) writeFile(filename string, read io.Reader) error {
 	if err != nil {
 		return fmt.Errorf("create file failed: %v", err)
 	}
+	defer f.Close()
 
 	if _, err = io.Copy(f, read); err != nil {
 		return fmt.Errorf("write file content failed")
