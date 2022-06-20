@@ -39,6 +39,13 @@ const (
 )
 
 func (mux *mux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// set cores headers
+	setCorsHeaders(w, r)
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
 	// authenticate
 	uname, pword, ok := r.BasicAuth()
 	if !ok {
