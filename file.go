@@ -84,33 +84,24 @@ loop:
 			continue
 		}
 
-		var matched bool
 		var filename = part.FileName()
-		for _, dir := range f.subdirs {
+		subdirs := append(f.subdirs, f.otherDir)
+		for _, dir := range subdirs {
 			if dir.matched(filename) {
 				if err := dir.writeFile(filename, part); err != nil {
 					if errors.Is(err, errFileExist) {
 						logs.appendFailed(filename, "Exist!")
 						continue loop
 					}
-					log.Printf("write file content failed: [%s]:%v", filename, err)
-					logs.appendFailed(filename, fmt.Sprintf("wirte file content failed: %v", err))
+					log.Printf("failed: [%s]:%v", filename, err)
+					logs.appendFailed(filename, err.Error())
 					continue loop
 				}
-				matched = true
-			}
-		}
-		if !matched {
-			err := f.otherDir.writeFile(filename, part)
-			if err != nil {
-				log.Printf("write file content failed: [%s]:%v", filename, err)
-				logs.appendFailed(filename, fmt.Sprintf("wirte file content failed: %v", err))
+				logs.appendOK(filename)
+				part.Close()
 				continue loop
 			}
 		}
-
-		logs.appendOK(filename)
-		part.Close()
 	}
 
 	var status int
