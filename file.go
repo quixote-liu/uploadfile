@@ -29,8 +29,7 @@ const (
 )
 
 type fileService struct {
-	subdirs  []*subDirectory
-	otherDir *subDirectory
+	subdirs []*subDirectory
 }
 
 func newFileService() *fileService {
@@ -41,8 +40,9 @@ func newFileService() *fileService {
 			newSubDirectory(dirContentTypeApplication, dirNameApplication),
 			newSubDirectory(dirContentTypeText, dirNameText),
 			newSubDirectory(dirContentTypeAudio, dirNameAudio),
+			// set the other directory as finally one.
+			newSubDirectory(dirContentTypeOther, dirNameOther),
 		},
-		otherDir: newSubDirectory(dirContentTypeOther, dirNameOther),
 	}
 }
 
@@ -51,9 +51,6 @@ func (f *fileService) initDirs() error {
 		if err := dir.make(); err != nil {
 			return err
 		}
-	}
-	if err := f.otherDir.make(); err != nil {
-		return err
 	}
 	return nil
 }
@@ -85,8 +82,7 @@ loop:
 		}
 
 		var filename = part.FileName()
-		subdirs := append(f.subdirs, f.otherDir)
-		for _, dir := range subdirs {
+		for _, dir := range f.subdirs {
 			if dir.matched(filename) {
 				if err := dir.writeFile(filename, part); err != nil {
 					if errors.Is(err, errFileExist) {
@@ -120,43 +116,47 @@ func (f *fileService) show(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// find directory
 	filename := r.URL.Query().Get("filename")
-
 	var dir *subDirectory
 	for _, d := range f.subdirs {
 		if d.matched(filename) {
 			dir = d
+			break
 		}
 	}
-	if dir == nil {
-		dir = f.otherDir
-	}
 
+	// open file
 	fs, err := dir.fs.Open(filename)
 	if err != nil {
 		if os.IsNotExist(err) {
-			responseJSON(w, http.StatusNotFound, H{"error": fmt.Sprintf("the file<%s> not found", filename)})
+			responseJSON(w, http.StatusNotFound, H{"error": fmt.Sprintf("the file[%s] not found", filename)})
 			return
 		}
-		log.Printf("[error]: open file<%s> failed: %v", filename, err)
+		log.Printf("[error]: open file[%s] failed: %v", filename, err)
 		responseStatus(w, http.StatusNotFound)
 		return
 	}
 	defer fs.Close()
 
+	// read file
 	buf := bytes.NewBuffer(nil)
 	defer buf.Reset()
 	if _, err := buf.ReadFrom(fs); err != nil {
-		log.Printf("read filename<%s> to buffer failed: %v", filename, err)
-		responseStatus(w, http.StatusNotFound)
+		log.Printf("write file[%s] content into buffer failed: %v", filename, err)
+		responseStatus(w, http.StatusInternalServerError)
 		return
 	}
 
+	// response to client
 	ct := mime.TypeByExtension(filepath.Ext(filename))
 	if ct == "" {
 		ct = "text/plain, chartset=utf-8"
 	}
 	w.Header().Set("Content-Type", ct)
+	if r.URL.Query().Get("download") == "true" {
+		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
+	}
 	w.WriteHeader(200)
 	if _, err := w.Write(buf.Bytes()); err != nil {
 		log.Printf("response file content failed: %v", err)
@@ -174,8 +174,7 @@ func (f *fileService) listFilenames(w http.ResponseWriter, r *http.Request) {
 	filenames := []string{}
 	errors := []string{}
 
-	allSubDirs := append(f.subdirs, f.otherDir)
-	for _, dir := range allSubDirs {
+	for _, dir := range f.subdirs {
 		entries, err := os.ReadDir(dir.path)
 		if err != nil {
 			errors = append(errors, err.Error())
@@ -192,14 +191,4 @@ func (f *fileService) listFilenames(w http.ResponseWriter, r *http.Request) {
 		d = H{"filenames": filenames}
 	}
 	responseJSON(w, http.StatusOK, d)
-}
-
-func (f *fileService) generatePDF(w http.ResponseWriter, r *http.Request) {
-	filename := r.URL.Query().Get("filename")
-	if filename == "" {
-		responseJSON(w, http.StatusBadRequest, H{"error": "missing filename in query message"})
-		return
-	}
-
-	
 }
